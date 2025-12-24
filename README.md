@@ -280,7 +280,13 @@ NT_ARCHIVE_DIR=~/.national-treasure/archive
 
 # Log level
 NT_LOG_LEVEL=INFO
+
+# Progress reporting (for orchestration)
+PROGRESS_SOCKET=/tmp/nt-progress.sock
+PROGRESS_SESSION_ID=session-123
 ```
+
+When `PROGRESS_SOCKET` is set, national-treasure sends JSON progress messages to the socket enabling orchestration tools to track processing status, ETA, and send control commands (pause/resume/cancel).
 
 ## How Learning Works
 

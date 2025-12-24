@@ -5,9 +5,13 @@ import tempfile
 from pathlib import Path
 
 import pytest
-import pytest_asyncio
 
-from national_treasure.core.database import init_database
+# pytest_asyncio is optional - only needed for async database tests
+try:
+    import pytest_asyncio
+    HAS_ASYNCIO = True
+except ImportError:
+    HAS_ASYNCIO = False
 
 
 @pytest.fixture(scope="session")
@@ -25,12 +29,14 @@ def temp_dir():
         yield Path(tmpdir)
 
 
-@pytest_asyncio.fixture
-async def test_db(temp_dir):
-    """Create a test database."""
-    db_path = temp_dir / "test.db"
-    await init_database(str(db_path))
-    yield str(db_path)
+if HAS_ASYNCIO:
+    @pytest_asyncio.fixture
+    async def test_db(temp_dir):
+        """Create a test database."""
+        from national_treasure.core.database import init_database
+        db_path = temp_dir / "test.db"
+        await init_database(str(db_path))
+        yield str(db_path)
 
 
 @pytest.fixture
