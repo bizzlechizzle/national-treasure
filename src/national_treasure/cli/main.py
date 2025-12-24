@@ -8,11 +8,26 @@ from typing import Optional
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+    TimeRemainingColumn,
+    MofNCompleteColumn,
+)
 
 from national_treasure import __version__
 from national_treasure.core.config import get_config, Config
 from national_treasure.core.database import init_database
+from national_treasure.core.progress import (
+    ProgressState,
+    CaptureStage,
+    format_duration,
+    format_eta,
+    truncate_middle,
+)
 
 # Create CLI app
 app = typer.Typer(
@@ -131,6 +146,32 @@ def capture_url(
         raise typer.Exit(1)
 
 
+class ETAColumn(TextColumn):
+    """Custom column showing EWMA-smoothed ETA."""
+
+    def __init__(self, progress_state: ProgressState):
+        super().__init__("")
+        self.state = progress_state
+
+    def render(self, task) -> str:
+        eta = self.state.eta_seconds
+        return f"ETA: {format_eta(eta)}"
+
+
+class CurrentFileColumn(TextColumn):
+    """Column showing current file being processed."""
+
+    def __init__(self, progress_state: ProgressState, max_width: int = 30):
+        super().__init__("")
+        self.state = progress_state
+        self.max_width = max_width
+
+    def render(self, task) -> str:
+        if not self.state.current_item:
+            return ""
+        return truncate_middle(self.state.current_item, self.max_width)
+
+
 @capture_app.command("batch")
 def capture_batch(
     input_file: Path = typer.Argument(..., help="File with URLs (one per line)"),
@@ -154,13 +195,28 @@ def capture_batch(
         raise typer.Exit(0)
 
     format_list = [f.strip() for f in formats.split(",")]
-    results = {"success": 0, "failed": 0}
 
-    async def capture_with_learning(url: str, service: CaptureService, learner: DomainLearner):
+    # Initialize progress state with EWMA tracking
+    state = ProgressState(total_items=len(urls))
+
+    async def capture_with_learning(
+        url: str,
+        service: CaptureService,
+        learner: DomainLearner,
+        progress: Progress,
+        task_id,
+    ):
         domain = urlparse(url).netloc
+
+        # Update state for current item
+        state.start_item(url)
+        state.set_stage(CaptureStage.INITIALIZING)
+
         config = await learner.get_best_config(domain)
+        state.set_stage(CaptureStage.NAVIGATING)
 
         result = await service.capture(url, formats=format_list, run_behaviors=True)
+        state.set_stage(CaptureStage.VALIDATING)
 
         # Record outcome for learning
         await learner.record_outcome(
@@ -169,6 +225,13 @@ def capture_batch(
             result.success,
             {"response_code": result.validation.http_status if result.validation else None},
         )
+        state.set_stage(CaptureStage.LEARNING)
+
+        # Update progress state
+        state.complete_item(success=result.success)
+
+        # Update Rich progress bar
+        progress.update(task_id, completed=state.completed_items + state.failed_items)
 
         return result
 
@@ -176,26 +239,40 @@ def capture_batch(
         learner = DomainLearner()
 
         async with CaptureService(headless=True, output_dir=output) as service:
-            with Progress(console=console) as progress:
-                task = progress.add_task("Capturing URLs...", total=len(urls))
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                MofNCompleteColumn(),
+                ETAColumn(state),
+                CurrentFileColumn(state),
+                console=console,
+                refresh_per_second=4,
+            ) as progress:
+                task_id = progress.add_task("Capturing", total=len(urls))
 
                 for url in urls:
                     try:
-                        result = await capture_with_learning(url, service, learner)
-                        if result.success:
-                            results["success"] += 1
-                        else:
-                            results["failed"] += 1
+                        result = await capture_with_learning(
+                            url, service, learner, progress, task_id
+                        )
+                        if not result.success:
                             console.print(f"[red]Failed:[/red] {url} - {result.error}")
                     except Exception as e:
-                        results["failed"] += 1
+                        state.complete_item(success=False)
+                        progress.update(task_id, completed=state.completed_items + state.failed_items)
                         console.print(f"[red]Error:[/red] {url} - {e}")
-
-                    progress.advance(task)
 
     asyncio.run(do_batch())
 
-    console.print(f"\n[green]Completed:[/green] {results['success']} succeeded, {results['failed']} failed")
+    # Summary with elapsed time
+    elapsed = format_duration(state.elapsed_seconds * 1000, style="long")
+    console.print(f"\n[green]Completed in {elapsed}[/green]")
+    console.print(f"  Success: {state.completed_items}")
+    console.print(f"  Failed: {state.failed_items}")
+    if state.items_per_second > 0:
+        console.print(f"  Avg speed: {state.items_per_second:.2f} URLs/sec")
 
 
 # ============================================================================
