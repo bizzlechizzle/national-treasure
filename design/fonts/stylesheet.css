@@ -1,0 +1,65 @@
+@font-face {
+    font-family: 'Braun Linear';
+    src: url('BraunLinear-Light.eot');
+    src: local('Braun Linear Light'), local('BraunLinear-Light'),
+        url('BraunLinear-Light.eot?#iefix') format('embedded-opentype'),
+        url('BraunLinear-Light.woff2') format('woff2'),
+        url('BraunLinear-Light.woff') format('woff'),
+        url('BraunLinear-Light.ttf') format('truetype');
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Braun Linear';
+    src: url('BraunLinear-Medium.eot');
+    src: local('Braun Linear Medium'), local('BraunLinear-Medium'),
+        url('BraunLinear-Medium.eot?#iefix') format('embedded-opentype'),
+        url('BraunLinear-Medium.woff2') format('woff2'),
+        url('BraunLinear-Medium.woff') format('woff'),
+        url('BraunLinear-Medium.ttf') format('truetype');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Braun Linear';
+    src: url('BraunLinear-Bold.eot');
+    src: local('Braun Linear Bold'), local('BraunLinear-Bold'),
+        url('BraunLinear-Bold.eot?#iefix') format('embedded-opentype'),
+        url('BraunLinear-Bold.woff2') format('woff2'),
+        url('BraunLinear-Bold.woff') format('woff'),
+        url('BraunLinear-Bold.ttf') format('truetype');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Braun Linear';
+    src: url('BraunLinear-Regular.eot');
+    src: local('Braun Linear Regular'), local('BraunLinear-Regular'),
+        url('BraunLinear-Regular.eot?#iefix') format('embedded-opentype'),
+        url('BraunLinear-Regular.woff2') format('woff2'),
+        url('BraunLinear-Regular.woff') format('woff'),
+        url('BraunLinear-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Braun Linear';
+    src: url('BraunLinear-Thin.eot');
+    src: local('Braun Linear Thin'), local('BraunLinear-Thin'),
+        url('BraunLinear-Thin.eot?#iefix') format('embedded-opentype'),
+        url('BraunLinear-Thin.woff2') format('woff2'),
+        url('BraunLinear-Thin.woff') format('woff'),
+        url('BraunLinear-Thin.ttf') format('truetype');
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap;
+}
+
