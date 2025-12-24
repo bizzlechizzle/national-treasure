@@ -59,9 +59,9 @@ class TestDomainLearner:
             details={"response_code": 200},
         )
 
-        # Get insights
+        # Get insights - each outcome records 3 arms (headless, wait, ua)
         insights = await learner.get_domain_insights("example.com")
-        assert insights["total_attempts"] == 1
+        assert insights["total_attempts"] == 3  # 3 arms recorded
         assert insights["success_rate"] == 1.0
 
     @pytest.mark.asyncio

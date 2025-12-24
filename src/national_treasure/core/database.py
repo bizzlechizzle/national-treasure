@@ -33,54 +33,29 @@ CREATE TABLE IF NOT EXISTS browser_configs (
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
--- Domain configurations (learned)
+-- Domain configurations (learned via Thompson Sampling)
 CREATE TABLE IF NOT EXISTS domain_configs (
-    domain TEXT PRIMARY KEY,
-    best_config_id TEXT REFERENCES browser_configs(config_id),
-    confidence REAL DEFAULT 0.5,
-    min_delay_ms INTEGER DEFAULT 1000,
-    max_requests_per_minute INTEGER DEFAULT 10,
-    requires_cookies INTEGER DEFAULT 0,
-    cookie_source TEXT,
-    session_lifetime_hours INTEGER,
-    needs_scroll_to_load INTEGER DEFAULT 0,
-    needs_click_to_expand INTEGER DEFAULT 0,
-    has_infinite_scroll INTEGER DEFAULT 0,
-    block_indicators TEXT,
-    success_indicators TEXT,
-    first_seen TEXT DEFAULT CURRENT_TIMESTAMP,
-    last_updated TEXT DEFAULT CURRENT_TIMESTAMP,
-    sample_count INTEGER DEFAULT 0
+    domain TEXT NOT NULL,
+    config_key TEXT NOT NULL,
+    success_count INTEGER DEFAULT 0,
+    failure_count INTEGER DEFAULT 0,
+    last_used TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (domain, config_key)
 );
 
 -- Request outcomes (ML training data)
 CREATE TABLE IF NOT EXISTS request_outcomes (
-    outcome_id TEXT PRIMARY KEY,
-    timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     domain TEXT NOT NULL,
-    url TEXT NOT NULL,
-    tld TEXT NOT NULL,
-    config_id TEXT REFERENCES browser_configs(config_id),
-    user_agent TEXT,
-    headless_mode TEXT,
-    stealth_enabled INTEGER,
-    request_hour INTEGER,
-    request_day_of_week INTEGER,
-    requests_last_minute INTEGER,
-    requests_last_hour INTEGER,
-    http_status INTEGER,
-    outcome TEXT,
+    config_hash TEXT,
+    success INTEGER NOT NULL,
+    response_code INTEGER,
     blocked_by TEXT,
-    content_extracted INTEGER,
-    content_length INTEGER,
-    page_title TEXT,
-    has_captcha INTEGER,
-    has_login_wall INTEGER,
-    response_time_ms INTEGER
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_outcomes_domain ON request_outcomes(domain);
-CREATE INDEX IF NOT EXISTS idx_outcomes_outcome ON request_outcomes(outcome);
-CREATE INDEX IF NOT EXISTS idx_outcomes_timestamp ON request_outcomes(timestamp);
+CREATE INDEX IF NOT EXISTS idx_outcomes_created ON request_outcomes(created_at);
 
 -- Domain similarity (clustering)
 CREATE TABLE IF NOT EXISTS domain_similarity (
@@ -94,65 +69,61 @@ CREATE TABLE IF NOT EXISTS domain_similarity (
 -- Jobs queue
 CREATE TABLE IF NOT EXISTS jobs (
     job_id TEXT PRIMARY KEY,
-    queue TEXT NOT NULL,
-    priority INTEGER DEFAULT 10,
-    status TEXT DEFAULT 'pending',
+    job_type TEXT NOT NULL,
     payload TEXT,
+    status TEXT DEFAULT 'pending',
+    priority INTEGER DEFAULT 0,
+    retry_count INTEGER DEFAULT 0,
     depends_on TEXT,
-    attempts INTEGER DEFAULT 0,
-    max_attempts INTEGER DEFAULT 3,
-    error TEXT,
-    result TEXT,
+    scheduled_for TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     started_at TEXT,
     completed_at TEXT,
-    locked_by TEXT,
-    locked_at TEXT,
-    retry_after TEXT
+    updated_at TEXT,
+    result TEXT,
+    error TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_jobs_queue ON jobs(queue, status, priority DESC);
 CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_priority ON jobs(priority DESC, scheduled_for ASC);
 
 -- Job dead letter queue
 CREATE TABLE IF NOT EXISTS job_dead_letter (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     job_id TEXT,
-    queue TEXT,
+    job_type TEXT,
     payload TEXT,
     error TEXT,
-    attempts INTEGER,
-    died_at TEXT DEFAULT CURRENT_TIMESTAMP
+    retry_count INTEGER,
+    original_created_at TEXT,
+    failed_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Selector patterns (learned from barbossa)
 CREATE TABLE IF NOT EXISTS selector_patterns (
-    pattern_id TEXT PRIMARY KEY,
     site TEXT NOT NULL,
     field TEXT NOT NULL,
     selector TEXT NOT NULL,
-    selector_type TEXT DEFAULT 'css',
     success_count INTEGER DEFAULT 0,
     failure_count INTEGER DEFAULT 0,
-    examples TEXT,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE(site, field, selector)
+    last_used TEXT,
+    last_value TEXT,
+    PRIMARY KEY (site, field, selector)
 );
 CREATE INDEX IF NOT EXISTS idx_selectors_site ON selector_patterns(site);
 
 -- URL patterns (image enhancement)
 CREATE TABLE IF NOT EXISTS url_patterns (
-    pattern_id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    site_type TEXT,
-    domain_regex TEXT,
-    path_regex TEXT,
-    transform_template TEXT,
-    confidence REAL DEFAULT 0.5,
+    site TEXT NOT NULL,
+    pattern_type TEXT NOT NULL,
+    pattern TEXT NOT NULL,
     success_count INTEGER DEFAULT 0,
-    fail_count INTEGER DEFAULT 0,
-    is_enabled INTEGER DEFAULT 1,
-    is_builtin INTEGER DEFAULT 0
+    failure_count INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    last_used TEXT,
+    example_source TEXT,
+    example_result TEXT,
+    PRIMARY KEY (site, pattern_type, pattern)
 );
 
 -- Web sources (captured pages)
@@ -323,3 +294,20 @@ async def close_db() -> None:
     if _db is not None:
         await _db.close()
         _db = None
+
+
+async def init_database(db_path: str) -> None:
+    """Initialize database at the given path.
+
+    Args:
+        db_path: Path to the database file
+    """
+    async with aiosqlite.connect(db_path) as db:
+        await db.execute("PRAGMA journal_mode=WAL")
+        await db.execute("PRAGMA foreign_keys=ON")
+        await db.executescript(SCHEMA_SQL)
+        await db.commit()
+
+
+# Alias for backward compatibility
+SCHEMA = SCHEMA_SQL

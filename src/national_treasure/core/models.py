@@ -1,16 +1,16 @@
 """Pydantic models for national-treasure."""
 
+import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
-from ulid import ULID
 
 
 def generate_id() -> str:
-    """Generate a unique ULID."""
-    return str(ULID())
+    """Generate a unique ID."""
+    return str(uuid.uuid4())
 
 
 class OutcomeType(str, Enum):
