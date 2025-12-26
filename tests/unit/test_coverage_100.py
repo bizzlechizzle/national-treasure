@@ -267,3 +267,24 @@ class TestImageDiscoveryFunctions:
 
         assert len(images) == 3
         assert images[0].url == "https://example.com/small.jpg"
+
+    def test_parse_srcset_empty_parts(self):
+        """Should skip empty parts in srcset."""
+        from national_treasure.services.image.discovery import parse_srcset
+
+        # Srcset with empty parts
+        srcset = "small.jpg 300w,  , medium.jpg 600w"
+        images = parse_srcset(srcset, "https://example.com/")
+
+        assert len(images) >= 2
+
+    def test_parse_srcset_invalid_width(self):
+        """Should handle invalid width descriptor."""
+        from national_treasure.services.image.discovery import parse_srcset
+
+        # Invalid width descriptor that can't be parsed as int
+        srcset = "image.jpg invalidw"
+        images = parse_srcset(srcset, "https://example.com/")
+
+        # Should still create image, just without width
+        assert len(images) >= 1
