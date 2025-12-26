@@ -1,10 +1,10 @@
 """Services for national-treasure."""
 
 from .xmp_writer import (
-    XmpWriter,
     WebProvenance,
-    get_xmp_writer,
+    XmpWriter,
     get_xmp_path,
+    get_xmp_writer,
     xmp_exists,
 )
 

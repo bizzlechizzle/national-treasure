@@ -2,8 +2,9 @@
 
 import asyncio
 import json
-from datetime import datetime, timedelta, timezone
-from typing import Any, Callable, Coroutine
+from collections.abc import Callable, Coroutine
+from datetime import UTC, datetime, timedelta
+from typing import Any
 
 import aiosqlite
 
@@ -85,7 +86,7 @@ class JobQueue:
             payload=payload,
             priority=priority,
             depends_on=depends_on,
-            scheduled_for=scheduled_for or datetime.now(timezone.utc),
+            scheduled_for=scheduled_for or datetime.now(UTC),
         )
 
         async with aiosqlite.connect(self.db_path) as db:
@@ -126,7 +127,7 @@ class JobQueue:
             List of job IDs
         """
         job_ids = []
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async with aiosqlite.connect(self.db_path) as db:
             for job_type, payload in jobs:
@@ -194,7 +195,7 @@ class JobQueue:
                 """,
                 (
                     JobStatus.CANCELLED.value,
-                    datetime.now(timezone.utc).isoformat(),
+                    datetime.now(UTC).isoformat(),
                     job_id,
                     JobStatus.PENDING.value,
                 ),
@@ -209,16 +210,15 @@ class JobQueue:
             Dict with counts by status
         """
         stats = {}
-        async with aiosqlite.connect(self.db_path) as db:
-            async with db.execute(
-                """
+        async with aiosqlite.connect(self.db_path) as db, db.execute(
+            """
                 SELECT status, COUNT(*) as count
                 FROM jobs
                 GROUP BY status
                 """
-            ) as cursor:
-                async for row in cursor:
-                    stats[row[0]] = row[1]
+        ) as cursor:
+            async for row in cursor:
+                stats[row[0]] = row[1]
         return stats
 
     async def start(self, num_workers: int | None = None) -> None:
@@ -280,7 +280,7 @@ class JobQueue:
         Returns:
             Job if one was claimed, None otherwise
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async with aiosqlite.connect(self.db_path) as db:
             db.row_factory = aiosqlite.Row
@@ -361,7 +361,7 @@ class JobQueue:
 
     async def _complete_job(self, job: Job, result: Any = None) -> None:
         """Mark job as completed."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -390,7 +390,7 @@ class JobQueue:
         else:
             # Calculate backoff delay
             delay_ms = self.base_retry_delay_ms * (2 ** (job.retry_count - 1))
-            next_attempt = datetime.now(timezone.utc) + timedelta(milliseconds=delay_ms)
+            next_attempt = datetime.now(UTC) + timedelta(milliseconds=delay_ms)
 
             async with aiosqlite.connect(self.db_path) as db:
                 await db.execute(
@@ -404,7 +404,7 @@ class JobQueue:
                         JobStatus.PENDING.value,
                         job.retry_count,
                         next_attempt.isoformat(),
-                        datetime.now(timezone.utc).isoformat(),
+                        datetime.now(UTC).isoformat(),
                         error,
                         job.job_id,
                     ),
@@ -413,7 +413,7 @@ class JobQueue:
 
     async def _fail_job(self, job: Job, error: str) -> None:
         """Mark job as failed."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(
@@ -434,7 +434,7 @@ class JobQueue:
 
     async def _move_to_dead_letter(self, job: Job, error: str) -> None:
         """Move failed job to dead letter queue."""
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         async with aiosqlite.connect(self.db_path) as db:
             await db.execute(

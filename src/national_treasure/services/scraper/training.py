@@ -3,7 +3,6 @@
 Ported from barbossa with enhancements for Thompson Sampling.
 """
 
-import json
 from datetime import datetime
 from typing import Any
 

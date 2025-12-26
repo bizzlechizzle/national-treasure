@@ -10,7 +10,6 @@ Implements patterns from CLI Progress Tracking SME document:
 from dataclasses import dataclass, field
 from enum import Enum
 from time import time
-from typing import Callable
 
 
 class CaptureStage(str, Enum):

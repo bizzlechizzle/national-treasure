@@ -3,10 +3,9 @@
 Uses Multi-Armed Bandit approach to learn optimal configurations per domain.
 """
 
-import json
 import random
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 import aiosqlite
@@ -158,7 +157,7 @@ class DomainLearner:
             success: Whether access succeeded
             details: Additional details (response code, block type, etc.)
         """
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
 
         # Determine which arms were used
         arms = [
@@ -277,36 +276,34 @@ class DomainLearner:
         similar = []
 
         # Check for explicit similarity mappings
-        async with aiosqlite.connect(self.db_path) as db:
-            async with db.execute(
-                """
+        async with aiosqlite.connect(self.db_path) as db, db.execute(
+            """
                 SELECT domain_b FROM domain_similarity
                 WHERE domain_a = ?
                 ORDER BY similarity_score DESC
                 LIMIT 5
                 """,
-                (domain,),
-            ) as cursor:
-                async for row in cursor:
-                    similar.append(row[0])
+            (domain,),
+        ) as cursor:
+            async for row in cursor:
+                similar.append(row[0])
 
         # If no explicit mappings, try TLD matching
         if not similar:
             parts = domain.split(".")
             if len(parts) >= 2:
                 tld = parts[-1]
-                async with aiosqlite.connect(self.db_path) as db:
-                    async with db.execute(
-                        """
+                async with aiosqlite.connect(self.db_path) as db, db.execute(
+                    """
                         SELECT DISTINCT domain FROM domain_configs
                         WHERE domain LIKE ?
                         AND domain != ?
                         LIMIT 5
                         """,
-                        (f"%.{tld}", domain),
-                    ) as cursor:
-                        async for row in cursor:
-                            similar.append(row[0])
+                    (f"%.{tld}", domain),
+                ) as cursor:
+                    async for row in cursor:
+                        similar.append(row[0])
 
         return similar
 

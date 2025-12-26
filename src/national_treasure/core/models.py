@@ -1,7 +1,7 @@
 """Pydantic models for national-treasure."""
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 from typing import Any
 
@@ -10,7 +10,7 @@ from pydantic import BaseModel, Field
 
 def _utc_now() -> datetime:
     """Get current UTC time (timezone-aware)."""
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 def generate_id() -> str:

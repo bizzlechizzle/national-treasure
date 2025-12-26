@@ -1,11 +1,9 @@
 """SQLite database management for national-treasure."""
 
-import json
-import sqlite3
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
-from datetime import datetime
 from pathlib import Path
-from typing import Any, AsyncGenerator
+from typing import Any
 
 import aiosqlite
 

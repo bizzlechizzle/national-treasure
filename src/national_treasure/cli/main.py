@@ -3,27 +3,25 @@
 import asyncio
 import json
 from pathlib import Path
-from typing import Optional
 
 import typer
 from rich.console import Console
-from rich.table import Table
 from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
     Progress,
     SpinnerColumn,
-    TextColumn,
-    BarColumn,
     TaskProgressColumn,
-    TimeRemainingColumn,
-    MofNCompleteColumn,
+    TextColumn,
 )
+from rich.table import Table
 
 from national_treasure import __version__
-from national_treasure.core.config import get_config, Config
+from national_treasure.core.config import get_config
 from national_treasure.core.database import init_database
 from national_treasure.core.progress import (
-    ProgressState,
     CaptureStage,
+    ProgressState,
     format_duration,
     format_eta,
     truncate_middle,
@@ -60,7 +58,7 @@ def version_callback(value: bool):
 
 @app.callback()
 def main(
-    version: Optional[bool] = typer.Option(
+    version: bool | None = typer.Option(
         None, "--version", "-v", callback=version_callback, is_eager=True,
         help="Show version"
     ),
@@ -81,7 +79,7 @@ def capture_url(
         "--formats", "-f",
         help="Comma-separated formats: screenshot,pdf,html,warc"
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(
         None, "--output", "-o",
         help="Output directory"
     ),
@@ -176,13 +174,14 @@ class CurrentFileColumn(TextColumn):
 def capture_batch(
     input_file: Path = typer.Argument(..., help="File with URLs (one per line)"),
     formats: str = typer.Option("screenshot,html", "--formats", "-f"),
-    output: Optional[Path] = typer.Option(None, "--output", "-o"),
+    output: Path | None = typer.Option(None, "--output", "-o"),
     concurrent: int = typer.Option(3, "--concurrent", "-c", help="Concurrent captures"),
 ):
     """Capture multiple URLs from a file."""
+    from urllib.parse import urlparse
+
     from national_treasure.services.capture.service import CaptureService
     from national_treasure.services.learning.domain import DomainLearner
-    from urllib.parse import urlparse
 
     if not input_file.exists():
         console.print(f"[red]Error:[/red] File not found: {input_file}")
@@ -285,8 +284,8 @@ def queue_add(
     priority: int = typer.Option(0, "--priority", "-p", help="Job priority"),
 ):
     """Add a URL to the capture queue."""
-    from national_treasure.services.queue.service import JobQueue
     from national_treasure.core.models import JobType
+    from national_treasure.services.queue.service import JobQueue
 
     async def do_add():
         queue = JobQueue()
@@ -327,9 +326,9 @@ def queue_run(
     workers: int = typer.Option(3, "--workers", "-w", help="Number of workers"),
 ):
     """Start processing the queue."""
-    from national_treasure.services.queue.service import JobQueue
+    from national_treasure.core.models import Job, JobType
     from national_treasure.services.capture.service import CaptureService
-    from national_treasure.core.models import JobType, Job
+    from national_treasure.services.queue.service import JobQueue
 
     async def handle_capture(job: Job):
         url = job.payload.get("url")
@@ -430,7 +429,7 @@ def training_stats():
 @training_app.command("export")
 def training_export(
     output: Path = typer.Argument(..., help="Output JSON file"),
-    site: Optional[str] = typer.Option(None, "--site", "-s", help="Filter by site"),
+    site: str | None = typer.Option(None, "--site", "-s", help="Filter by site"),
 ):
     """Export training data to JSON."""
     from national_treasure.services.scraper.training import TrainingService
@@ -466,7 +465,7 @@ def training_import(
         return await service.import_training_data(data, merge=merge)
 
     counts = asyncio.run(do_import())
-    console.print(f"[green]Imported:[/green]")
+    console.print("[green]Imported:[/green]")
     console.print(f"  Selectors: {counts['selectors']}")
     console.print(f"  URL patterns: {counts['url_patterns']}")
 

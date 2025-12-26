@@ -50,10 +50,7 @@ class BaseScraper(ABC):
         Returns:
             True if scraper handles this URL
         """
-        for pattern in cls.SITE_PATTERNS:
-            if re.search(pattern, url, re.IGNORECASE):
-                return True
-        return False
+        return any(re.search(pattern, url, re.IGNORECASE) for pattern in cls.SITE_PATTERNS)
 
     @abstractmethod
     async def extract(self, page: Page, url: str) -> dict[str, Any]:

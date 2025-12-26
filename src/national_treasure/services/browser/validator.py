@@ -1,6 +1,5 @@
 """Response validation for bot detection (OPT-122)."""
 
-import re
 from dataclasses import dataclass
 
 from playwright.async_api import Page, Response
@@ -288,10 +287,7 @@ class ResponseValidator:
             return True
 
         # Empty body with just head
-        if "<body>" in content and content.count("<") < 20:
-            return True
-
-        return False
+        return "<body>" in content and content.count("<") < 20
 
 
 async def validate_response(

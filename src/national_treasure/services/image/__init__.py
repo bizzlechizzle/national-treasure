@@ -3,8 +3,8 @@
 from national_treasure.services.image.discovery import (
     DiscoveredImage,
     ImageDiscoveryResult,
-    discover_images,
     discover_and_deduplicate,
+    discover_images,
     parse_srcset,
 )
 

@@ -1,19 +1,17 @@
 """Capture service for archiving web pages."""
 
-import asyncio
 import gzip
 import hashlib
-import re
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from urllib.parse import urlparse
 
 from playwright.async_api import Page
 
 from national_treasure.core.config import get_config
-from national_treasure.core.models import BrowserConfig, CaptureResult, ValidationResult
-from national_treasure.services.browser.behaviors import BehaviorOptions, run_behaviors as execute_behaviors
+from national_treasure.core.models import BrowserConfig, CaptureResult
+from national_treasure.services.browser.behaviors import BehaviorOptions
+from national_treasure.services.browser.behaviors import run_behaviors as execute_behaviors
 from national_treasure.services.browser.service import BrowserService
 from national_treasure.services.browser.validator import validate_response
 
@@ -122,7 +120,7 @@ class CaptureService:
                             result.warc_path = await self._capture_warc(
                                 page, url, output_path
                             )
-                    except Exception as e:
+                    except Exception:
                         # Log error but continue with other formats
                         pass
 
@@ -177,7 +175,6 @@ class CaptureService:
 
         # Get page content and response info
         content = await page.content()
-        title = await page.title()
 
         # Create WARC record
         warc_records = []
@@ -192,7 +189,7 @@ class CaptureService:
             warc_id,
             timestamp,
             url,
-            f"software: national-treasure/0.1.0\r\nformat: WARC/1.1\r\n",
+            "software: national-treasure/0.1.0\r\nformat: WARC/1.1\r\n",
             "application/warc-fields",
         )
         warc_records.append(warcinfo)

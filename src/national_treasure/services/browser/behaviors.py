@@ -1,8 +1,8 @@
 """Page behaviors for content expansion (Browsertrix-level)."""
 
 import asyncio
-from dataclasses import dataclass, field
-from typing import Callable
+from collections.abc import Callable
+from dataclasses import dataclass
 
 from playwright.async_api import Page
 
@@ -74,7 +74,7 @@ class PageBehaviors:
                     timeout=self.options.max_behavior_time_ms / 1000,
                 )
                 self._update_stats(stats, name, result)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 pass  # Behavior timed out, continue with next
             except Exception:
                 pass  # Behavior failed, continue with next

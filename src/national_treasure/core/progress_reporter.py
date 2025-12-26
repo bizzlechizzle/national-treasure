@@ -12,9 +12,9 @@ import os
 import socket
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from typing import Callable
+from datetime import UTC, datetime
 
 # App identification
 APP_NAME = "national-treasure"
@@ -143,7 +143,7 @@ class ProgressReporter:
             return
 
         full_msg = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "session_id": self.session_id,
             "app": APP_NAME,
             "app_version": APP_VERSION,
@@ -202,7 +202,7 @@ class ProgressReporter:
                 "item_short": data.current_item[:50] + "..." if data.current_item and len(data.current_item) > 50 else data.current_item,
             },
             "timing": {
-                "started_at": datetime.fromtimestamp(self.started_at, timezone.utc).isoformat(),
+                "started_at": datetime.fromtimestamp(self.started_at, UTC).isoformat(),
                 "elapsed_ms": elapsed_ms,
                 "eta_ms": data.eta_ms,
             },

@@ -6,7 +6,7 @@ Uses wget for WARC generation with fallback to simplified HTML capture.
 import asyncio
 import hashlib
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import NamedTuple
 
@@ -27,7 +27,7 @@ def _wget_available() -> bool:
 def _generate_warc_filename(url: str) -> str:
     """Generate a unique WARC filename from URL."""
     url_hash = hashlib.md5(url.encode()).hexdigest()[:12]
-    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
     return f"capture-{timestamp}-{url_hash}"
 
 
@@ -94,7 +94,7 @@ async def capture_warc(
                 proc.communicate(),
                 timeout=timeout_seconds
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             proc.kill()
             await proc.wait()
             return WarcResult(

@@ -5,12 +5,12 @@ Preserves other namespaces (wnb:, shoe:, vbuffet:) when writing.
 Appends to shared custody chain for provenance tracking.
 """
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from pathlib import Path
 import os
 import secrets
 import socket
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 # Try to import exiftool
@@ -69,7 +69,7 @@ def _build_custody_event(action: str, outcome: str, notes: str | None = None) ->
     """Build custody event struct for exiftool."""
     event_struct = (
         f"{{EventID={_generate_event_id()},"
-        f"EventTimestamp={datetime.now(timezone.utc).isoformat()},"
+        f"EventTimestamp={datetime.now(UTC).isoformat()},"
         f"EventAction={action},"
         f"EventOutcome={outcome},"
         f"EventTool={TOOL_NAME}/{TOOL_VERSION},"
@@ -125,7 +125,7 @@ class XmpWriter:
         # Build exiftool arguments
         args = [
             f"-XMP-{NAMESPACE}:SchemaVersion={SCHEMA_VERSION}",
-            f"-XMP-{NAMESPACE}:CapturedAt={datetime.now(timezone.utc).isoformat()}",
+            f"-XMP-{NAMESPACE}:CapturedAt={datetime.now(UTC).isoformat()}",
             f"-XMP-{NAMESPACE}:SourceURL={provenance.source_url}",
             f"-XMP-{NAMESPACE}:CaptureMethod={provenance.capture_method}",
             f"-XMP-{NAMESPACE}:BrowserEngine={provenance.browser_engine}",
@@ -155,7 +155,7 @@ class XmpWriter:
         custody_notes = f"Captured {provenance.capture_method} from {provenance.source_url[:50]}"
         args.extend([
             f"-XMP-wnb:EventCount={event_count + 1}",
-            f"-XMP-wnb:SidecarUpdated={datetime.now(timezone.utc).isoformat()}",
+            f"-XMP-wnb:SidecarUpdated={datetime.now(UTC).isoformat()}",
             f"-XMP-wnb:CustodyChain+={_build_custody_event('web_capture', 'success', custody_notes)}",
         ])
 
@@ -185,14 +185,14 @@ class XmpWriter:
 
         args = [
             # Initial custody chain setup
-            f"-XMP-wnb:FirstSeen={datetime.now(timezone.utc).isoformat()}",
+            f"-XMP-wnb:FirstSeen={datetime.now(UTC).isoformat()}",
             "-XMP-wnb:EventCount=1",
-            f"-XMP-wnb:SidecarCreated={datetime.now(timezone.utc).isoformat()}",
-            f"-XMP-wnb:SidecarUpdated={datetime.now(timezone.utc).isoformat()}",
+            f"-XMP-wnb:SidecarCreated={datetime.now(UTC).isoformat()}",
+            f"-XMP-wnb:SidecarUpdated={datetime.now(UTC).isoformat()}",
             f"-XMP-wnb:CustodyChain+={_build_custody_event('web_capture', 'success', f'Initial capture from {provenance.source_url[:50]}')}",
             # NT namespace metadata
             f"-XMP-{NAMESPACE}:SchemaVersion={SCHEMA_VERSION}",
-            f"-XMP-{NAMESPACE}:CapturedAt={datetime.now(timezone.utc).isoformat()}",
+            f"-XMP-{NAMESPACE}:CapturedAt={datetime.now(UTC).isoformat()}",
             f"-XMP-{NAMESPACE}:SourceURL={provenance.source_url}",
             f"-XMP-{NAMESPACE}:CaptureMethod={provenance.capture_method}",
             f"-XMP-{NAMESPACE}:BrowserEngine={provenance.browser_engine}",
@@ -252,7 +252,7 @@ class XmpWriter:
             et.execute(
                 "-overwrite_original",
                 f"-XMP-wnb:EventCount={event_count + 1}",
-                f"-XMP-wnb:SidecarUpdated={datetime.now(timezone.utc).isoformat()}",
+                f"-XMP-wnb:SidecarUpdated={datetime.now(UTC).isoformat()}",
                 f"-XMP-wnb:CustodyChain+={_build_custody_event(action, outcome, notes)}",
                 str(xmp_path),
             )

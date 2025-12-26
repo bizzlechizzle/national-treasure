@@ -1,12 +1,11 @@
 """Browser service with Playwright."""
 
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncGenerator
 
 from playwright.async_api import Browser, BrowserContext, Page, async_playwright
 
-from national_treasure.core.config import get_config
 from national_treasure.core.models import BrowserConfig, HeadlessMode
 
 # Default user agent (Chrome on macOS)
