@@ -1,5 +1,7 @@
 """Tests for page behaviors."""
 
+import asyncio
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
@@ -188,3 +190,168 @@ class TestRunBehaviors:
         options = BehaviorOptions(scroll_to_load=False)
         stats = await run_behaviors(page, options=options)
         assert stats.duration_ms >= 0
+
+
+class TestBehaviorTimeouts:
+    """Tests for timeout handling."""
+
+    @pytest.mark.asyncio
+    async def test_behavior_timeout(self):
+        """Should handle behavior timeout gracefully."""
+        async def slow_behavior(page):
+            await asyncio.sleep(10)  # Longer than timeout
+            return 1
+
+        options = BehaviorOptions(
+            max_behavior_time_ms=50,
+            max_total_time_ms=100,
+            dismiss_overlays=True,
+            scroll_to_load=False,
+            expand_content=False,
+            click_tabs=False,
+            navigate_carousels=False,
+            expand_comments=False,
+            handle_infinite_scroll=False,
+        )
+        behaviors = PageBehaviors(options=options)
+        page = MockPage()
+        page._elements = []
+
+        # Patch the overlay behavior to be slow
+        behaviors._dismiss_overlays = slow_behavior
+
+        stats = await behaviors.run_all(page)
+        # Should complete without error despite timeout
+        assert stats.duration_ms >= 0
+
+    @pytest.mark.asyncio
+    async def test_behavior_exception(self):
+        """Should handle behavior exception gracefully."""
+        async def failing_behavior(page):
+            raise ValueError("Test error")
+
+        options = BehaviorOptions(
+            dismiss_overlays=True,
+            scroll_to_load=False,
+            expand_content=False,
+            click_tabs=False,
+            navigate_carousels=False,
+            expand_comments=False,
+            handle_infinite_scroll=False,
+        )
+        behaviors = PageBehaviors(options=options)
+        page = MockPage()
+        page._elements = []
+
+        # Patch the overlay behavior to fail
+        behaviors._dismiss_overlays = failing_behavior
+
+        stats = await behaviors.run_all(page)
+        # Should complete without error despite exception
+        assert stats.duration_ms >= 0
+
+    @pytest.mark.asyncio
+    async def test_total_time_limit(self):
+        """Should respect total time limit."""
+        call_count = 0
+
+        async def counting_behavior(page):
+            nonlocal call_count
+            call_count += 1
+            await asyncio.sleep(0.1)
+            return 1
+
+        options = BehaviorOptions(
+            max_total_time_ms=50,  # Very short total time
+            max_behavior_time_ms=30000,
+            dismiss_overlays=True,
+            scroll_to_load=True,
+            expand_content=True,
+            click_tabs=True,
+            navigate_carousels=True,
+            expand_comments=True,
+            handle_infinite_scroll=True,
+        )
+        behaviors = PageBehaviors(options=options)
+        page = MockPage()
+        page._elements = []
+
+        # Patch all behaviors
+        behaviors._dismiss_overlays = counting_behavior
+        behaviors._scroll_to_load_all = counting_behavior
+        behaviors._expand_all_content = counting_behavior
+        behaviors._click_all_tabs = counting_behavior
+        behaviors._navigate_carousels = counting_behavior
+        behaviors._expand_comments = counting_behavior
+        behaviors._handle_infinite_scroll = counting_behavior
+
+        stats = await behaviors.run_all(page)
+        # Should have stopped before running all behaviors
+        assert call_count < 7
+
+
+class TestStatsUpdate:
+    """Tests for stats update method."""
+
+    def test_update_stats_overlays(self):
+        """Should update overlays stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "overlays", 5)
+        assert stats.overlays_dismissed == 5
+
+    def test_update_stats_scroll(self):
+        """Should update scroll stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "scroll", 1500)
+        assert stats.scroll_depth == 1500
+
+    def test_update_stats_expand(self):
+        """Should update expand stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "expand", 10)
+        assert stats.elements_expanded == 10
+
+    def test_update_stats_tabs(self):
+        """Should update tabs stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "tabs", 3)
+        assert stats.tabs_clicked == 3
+
+    def test_update_stats_carousels(self):
+        """Should update carousel stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "carousels", 8)
+        assert stats.carousel_slides == 8
+
+    def test_update_stats_comments(self):
+        """Should update comments stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "comments", 25)
+        assert stats.comments_loaded == 25
+
+    def test_update_stats_infinite(self):
+        """Should update infinite scroll stat."""
+        from national_treasure.core.models import BehaviorStats
+
+        behaviors = PageBehaviors()
+        stats = BehaviorStats()
+        behaviors._update_stats(stats, "infinite", 4)
+        assert stats.infinite_scroll_pages == 4
