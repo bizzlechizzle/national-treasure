@@ -6,7 +6,7 @@ Uses Multi-Armed Bandit approach to learn optimal configurations per domain.
 import json
 import random
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 import aiosqlite
@@ -158,7 +158,7 @@ class DomainLearner:
             success: Whether access succeeded
             details: Additional details (response code, block type, etc.)
         """
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Determine which arms were used
         arms = [

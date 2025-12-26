@@ -1,11 +1,16 @@
 """Pydantic models for national-treasure."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field
+
+
+def _utc_now() -> datetime:
+    """Get current UTC time (timezone-aware)."""
+    return datetime.now(timezone.utc)
 
 
 def generate_id() -> str:
@@ -144,8 +149,8 @@ class DomainConfig(BaseModel):
     success_indicators: list[str] = Field(default_factory=list)
 
     # Metadata
-    first_seen: datetime = Field(default_factory=datetime.utcnow)
-    last_updated: datetime = Field(default_factory=datetime.utcnow)
+    first_seen: datetime = Field(default_factory=_utc_now)
+    last_updated: datetime = Field(default_factory=_utc_now)
     sample_count: int = 0
 
 
@@ -153,7 +158,7 @@ class RequestOutcome(BaseModel):
     """Outcome of a browser request."""
 
     outcome_id: str = Field(default_factory=generate_id)
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utc_now)
 
     # Target info
     domain: str
@@ -191,7 +196,7 @@ class CaptureResult(BaseModel):
 
     success: bool
     url: str
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=_utc_now)
 
     # Captured files
     screenshot_path: str | None = None
@@ -242,8 +247,8 @@ class SelectorPattern(BaseModel):
     failure_count: int = 0
     examples: list[str] = Field(default_factory=list)
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
+    updated_at: datetime = Field(default_factory=_utc_now)
 
     @property
     def confidence(self) -> float:
@@ -298,7 +303,7 @@ class Job(BaseModel):
     depends_on: str | None = None
     scheduled_for: datetime | None = None
 
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=_utc_now)
     started_at: datetime | None = None
     completed_at: datetime | None = None
     updated_at: datetime | None = None

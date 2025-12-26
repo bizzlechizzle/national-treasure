@@ -322,9 +322,72 @@ Automatic detection of:
 - **Rate limiting**: "Too many requests"
 - **Login walls**: "Please sign in"
 
+## Troubleshooting
+
+### Installation Issues
+
+**Python version mismatch**:
+```bash
+# Verify Python version (requires 3.11+)
+python --version
+
+# Use specific Python version
+python3.11 -m pip install -e .
+```
+
+**Virtual environment recommended**:
+```bash
+python3.11 -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+pip install -e ".[dev]"
+```
+
+**Playwright not installed**:
+```bash
+playwright install chromium
+# or for all browsers:
+playwright install
+```
+
+### Common Errors
+
+**"ModuleNotFoundError: No module named 'national_treasure'"**:
+- Ensure package is installed: `pip install -e .`
+- Ensure you're in the correct virtual environment
+
+**"Browser not found"**:
+- Run: `playwright install chromium`
+
+**"Database not initialized"**:
+- Run: `nt db init`
+
+**Tests failing with import errors**:
+```bash
+# Reinstall in development mode
+pip install -e ".[dev]"
+pytest tests/unit/ -v
+```
+
+### Bot Detection Issues
+
+**Getting blocked frequently**:
+- Try visible mode: `nt capture url <URL> --visible`
+- Add delays: The learning system will adapt over time
+- Check domain insights: `nt learning insights <domain>`
+
+**CAPTCHA detected**:
+- Some sites require cookies/sessions
+- Use `--no-behaviors` to reduce detection surface
+
 ## Development
 
 ```bash
+# Create virtual environment (recommended)
+python3.11 -m venv .venv
+source .venv/bin/activate
+
 # Install dev dependencies
 pip install -e ".[dev]"
 
